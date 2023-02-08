@@ -1,0 +1,46 @@
+variables:
+  IMAGE_NAME: nicolealcid/python-demo
+  IMAGE_TAG: python-app-1.0
+
+stages:
+  - test
+  - linting
+  - build
+
+run_tests:
+  stage: test
+  image: python:3.9-slim-buster
+  allow_failure: true
+  before_script:
+    - apt-get update && apt-get install make
+  script:
+    - make test-report
+    - make test-api
+  artifacts:
+    reports:
+      junit: test-results.xml
+    expire_in: 7 days
+    when: always
+
+lint:
+  stage: linting
+  image: python:3.9-slim-buster
+  allow_failure: true
+  before_script:
+    - apt-get update && apt-get install make
+  script:
+    - make lint
+
+build_image:
+  stage: build
+  image: docker:20.10.16
+  services:
+    - docker:20.10.16-dind
+  variables:
+    DOCKER_TLS_CERTDIR: ""
+  before_script:
+    - docker login -u $REGISTRY_USER -p $REGISTRY_PASS
+  script:
+    - docker build -t $IMAGE_NAME:$IMAGE_TAG .
+    - docker push $IMAGE_NAME:$IMAGE_TAG
+
